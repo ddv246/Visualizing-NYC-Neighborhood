@@ -1,0 +1,7 @@
+// DATA INGEST - 311 DATA
+
+// Data was directly downloaded from opendata.cityofnewyork.us as csv file
+// I moved the csv file to dumbo using WinSCP
+
+hdfs dfs -put 311_Service_Requests_from_2019.csv
+hdfs dfs -mv 311_Service_Requests_from_2019.csv BDAD_Project/311_Service_Requests_from_2019.csv

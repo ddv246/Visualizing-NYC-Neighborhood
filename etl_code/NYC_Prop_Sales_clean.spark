@@ -1,0 +1,149 @@
+// DATA CLEANING - NYC PROPERTY SALES DATA
+
+val datafile = "hdfs:///user/ddv246/BDAD_Project/NYC_Property_Sales.csv"
+
+val df = spark.read.option("header",true).csv(datafile)
+
+val file = sc.textFile(datafile)
+
+//Cleaning RDD - dropping unnecessary colums,changing column datatypes
+//By looking at the data, we can conclude that columns such as EASE-MENT, latitude, longitude are not necessary as we will be splitting 
+//based on zipcode. 
+
+case class prop_sale(
+BOROUGH:String,
+NEIGHBORHOOD:String,
+BUILDING_CLASS_CATEGORY:String,
+TAX_CLASS_AS_OF_FINAL_ROLL:Int,
+BLOCK:String,
+LOT:String,
+BUILDING_CLASS_AS_OF_FINAL_ROLL:String,
+ADDRESS:String,
+APARTMENT_NUMBER:String,
+ZIP_CODE:Int,
+ RESIDENTIAL_UNITS:Int,
+ COMMERCIAL_UNITS:Int,
+TOTAL_UNITS:Int,
+LAND_SQUARE_FEET:Int,
+ GROSS_SQUARE_FEET:Int,
+YEAR_BUILT:Int,
+TAX_CLASS_AT_TIME_OF_SALE:Int,
+BUILDING_CLASS_AT_TIME_OF_SALE:String,
+SALE_PRICE:Int,
+SALE_DATE:java.sql.Date,
+Community_Board:Int,
+Council_District:Int,
+Census_Tract:Int
+)
+
+
+val format = new java.text.SimpleDateFormat("MM/dd/yyyy")
+
+df.rdd
+
+import scala.util.{Try,Success,Failure}
+
+//Converting column datatypes and removing outliers 
+val readRDD=df.rdd.
+map{
+  row => 
+  {
+    val newrow = prop_sale(
+                           row(0).asInstanceOf[String],
+                           row(1).asInstanceOf[String],
+                           row(2).asInstanceOf[String],
+                           Try(row(3).asInstanceOf[Int]).getOrElse(0),
+                           row(4).asInstanceOf[String],
+                           row(5).asInstanceOf[String],
+                           row(7).asInstanceOf[String],
+                           row(8).asInstanceOf[String],
+                           row(9).asInstanceOf[String],
+                           Try(row(10).asInstanceOf[String].toInt).getOrElse(0),
+                           Try(row(11).asInstanceOf[String].toInt).getOrElse(0),
+                           Try(row(12).asInstanceOf[String].toInt).getOrElse(0),
+                           Try(row(13).asInstanceOf[String].toInt).getOrElse(0),
+                           Try(row(14).asInstanceOf[String].replace(",","").replace("-","").replace(" ","").toInt).getOrElse(0),
+                           Try(row(15).asInstanceOf[String].replace(",","").replace("-","").replace(" ","").toInt).getOrElse(0),
+                           Try(row(16).asInstanceOf[String].toInt).getOrElse(0),
+                           Try(row(17).asInstanceOf[String].toInt).getOrElse(0),
+                           row(18).asInstanceOf[String],
+                           Try(row(19).asInstanceOf[String].toInt).getOrElse(0),
+                           new java.sql.Date(Try(format.parse(row(20).asInstanceOf[String])).getOrElse(format.parse("12/31/1999")).getTime()),
+                           Try(row(23).asInstanceOf[String].toInt).getOrElse(0),
+                           Try(row(24).asInstanceOf[String].toInt).getOrElse(0),
+                           Try(row(25).asInstanceOf[String].toInt).getOrElse(0)
+                          )
+    newrow
+  }
+}.cache()
+
+//total number of rows 
+readRDD.count()  //345059
+
+//Cleaning rows
+
+//ZIPCODE- checking if zipcode column has 0 
+readRDD.filter(row => (row.ZIP_CODE == 0)).count() //2812
+
+val rdd_filter_zipcode=readRDD.filter(row => (row.ZIP_CODE !=0)) 
+
+rdd_filter_zipcode.count()  //342247
+
+
+
+//YEARBUILT- checking if year built is 0 
+rdd_filter_zipcode.filter(row => (row.YEAR_BUILT == 0 )).count() //27017
+
+val rdd_filter_yearbuilt=rdd_filter_zipcode.filter(row => (row.YEAR_BUILT != 0))
+
+rdd_filter_yearbuilt.count()  //315230
+
+
+//SALEPRICE
+
+rdd_filter_yearbuilt.filter(row => (row.SALE_PRICE > 1 && row.SALE_PRICE < 100)).count() //3072
+
+val rdd_filter_saleprice=rdd_filter_yearbuilt.filter(row => (row.SALE_PRICE > 100 || row.SALE_PRICE == 0))
+
+rdd_filter_saleprice.count() // 311304
+
+//Checking if TAX_CLASS_AT_TIME_OF_SALE has 0 values
+rdd_filter_saleprice.filter(row => (row.TAX_CLASS_AT_TIME_OF_SALE == 0)).count() // 0
+
+//Checking if BUILDING_CLASS_AT_TIME_OF_SALE has null values
+rdd_filter_saleprice.filter(row => (row.BUILDING_CLASS_AT_TIME_OF_SALE =="")).count() // 0
+
+//Checking if BUILDING_CLASS_AS_OF_FINAL_ROLL has null values 
+rdd_filter_saleprice.filter(row => (row.BUILDING_CLASS_AS_OF_FINAL_ROLL=="")).count() // 0
+
+//Checking if  BUILDING_CLASS_CATEGORY has null values 
+rdd_filter_saleprice.filter(row => (row.BUILDING_CLASS_CATEGORY=="")).count() //0 
+
+//Building Class as of final roll- Building class plays a very vital role in chosing only one family house/apartments/condos
+rdd_filter_saleprice.filter( row => ( List("A0","A1","A2","A3","A4","A5","A6","A7","A8","A9","S0","S1","R1","R2","R3","R4","R6","R7","R8","R9").contains(row.BUILDING_CLASS_AS_OF_FINAL_ROLL ))).count()
+
+//filtering out rows which are of building class  corresponding to one family house/apartment/condos
+val rdd_filter_buildingclass= rdd_filter_saleprice.filter( row => ( List("A0","A1","A2","A3","A4","A5","A6","A7","A8","A9","S0","S1","R1","R2","R3","R4","R6","R7","R8","R9").contains(row.BUILDING_CLASS_AS_OF_FINAL_ROLL )))
+
+//Building class- filtering out building class category with respect to building class
+val rdd_filter_homebuildingsonly=rdd_filter_buildingclass.filter(row => row.BUILDING_CLASS_CATEGORY=="01 ONE FAMILY DWELLINGS"
+                                     
+                                || row.BUILDING_CLASS_CATEGORY == "09 COOPS - WALKUP APARTMENTS"                                 
+                                || row.BUILDING_CLASS_CATEGORY == "10 COOPS - ELEVATOR APARTMENTS"
+                                || row.BUILDING_CLASS_CATEGORY == "12 CONDOS - WALKUP APARTMENTS"
+                                || row.BUILDING_CLASS_CATEGORY == "13 CONDOS - ELEVATOR APARTMENTS"
+                                || row.BUILDING_CLASS_CATEGORY == "15 CONDOS - 2-10 UNIT RESIDENTIAL")
+                               
+                                                                 
+rdd_filter_homebuildingsonly.count()
+
+//Run this only if  you want to save as a parquet file. DO NOT RUN this line if you dont need to convert to a parquet file.
+// The rdd is converted to a dataframe in app_code file using the code in the next comment.
+
+rdd_filter_homebuildingsonly.write.parquet("Property_Sales_Cleaned_final.parquet")
+
+
+//val df1 =spark.createDataFrame(rdd_filter_homebuildingsonly)
+
+
+

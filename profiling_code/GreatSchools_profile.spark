@@ -1,0 +1,30 @@
+// DATA PROFILING - GREATSCHOOLS DATA
+
+val df = spark.read.option("header",true).csv("gs_data.csv")
+
+// cast the Rating column to a numerical type
+import org.apache.spark.sql.types.FloatType
+
+val df2 = df.withColumn("Rating", col("Rating").cast(FloatType))
+
+// let's compute the range, mean and standard deviation of the ratings
+df2.select(mean(df2("Rating"))).show()
+// 4.645
+
+df2.select(stddev_pop(df2("Rating"))).show()
+// 3.203
+
+df2.select(min(df2("Rating"))).show()
+// -1.0 
+// -1 was used as a null filler in the scraper
+
+df2.select(max(df2("Rating"))).show()
+// 10
+
+// How many unique Zip codes do we have?
+df2.select(countDistinct("Zip")).show()
+// 45
+
+// How many schools are there?
+df2.count()
+// 386

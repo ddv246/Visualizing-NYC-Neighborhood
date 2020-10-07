@@ -1,0 +1,38 @@
+// DATA PROFILING - 311 DATA
+
+val requestFile = "BDAD_Project/311_Cleaned/part-*"
+val requestRDD = sc.textFile(requestFile)
+
+// split fields by commas while ignoring commas within fields
+val requestFieldsRDD = requestRDD.map(line => line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
+
+// check distinct dates
+val dateCreatedKeyRDD = requestFieldsRDD.map(line => (line(0),1)).reduceByKey(_+_).sortBy(line => line._1, true)
+dateCreatedKeyRDD.collect.foreach(println)
+dateCreatedKeyRDD.count
+
+// check distinct complaint types and length of strings in the field
+val complaintKeyRDD = requestFieldsRDD.map(line => (line(1),1)).reduceByKey(_+_).sortBy(line => line, true)
+complaintKeyRDD.collect.foreach(println)
+complaintKeyRDD.count
+val complaintKeyLengthRDD = requestFieldsRDD.map(line => (line(1),1)).reduceByKey(_+_).map(line => (line._1.length,1)).reduceByKey(_+_).sortBy(line => line, true)
+complaintKeyLengthRDD.collect.foreach(println)
+
+// check distinct descriptors and length of strings in the field
+val descriptorKeyRDD = requestFieldsRDD.map(line => (line(2),1)).reduceByKey(_+_).sortBy(line => line, true)
+descriptorKeyRDD.collect.foreach(println)
+descriptorKeyRDD.count
+val descriptorKeyLengthRDD = requestFieldsRDD.map(line => (line(2),1)).reduceByKey(_+_).map(line => (line._1.length,1)).reduceByKey(_+_).sortBy(line => line, true)
+descriptorKeyLengthRDD.collect.foreach(println)
+
+// check distinct zip codes
+val zipKeyRDD = requestFieldsRDD.map(line => (line(3),1)).reduceByKey(_+_).sortBy(line => line._1, true)
+zipKeyRDD.collect.foreach(println)
+zipKeyRDD.count
+
+// check distinct boroughs and length of strings in the field
+val boroughKeyRDD = requestFieldsRDD.map(line => (line(4),1)).reduceByKey(_+_).sortBy(line => line._1, true)
+boroughKeyRDD.collect.foreach(println)
+boroughKeyRDD.count
+val boroughKeyLengthRDD = requestFieldsRDD.map(line => (line(4),1)).reduceByKey(_+_).map(line => (line._1.length,1)).reduceByKey(_+_).sortBy(line => line, true)
+boroughKeyLengthRDD.collect.foreach(println)

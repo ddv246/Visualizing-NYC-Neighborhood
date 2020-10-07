@@ -1,0 +1,23 @@
+// DATA CLEANING - GREATSCHOOLS DATA
+
+// Since the data is fairly straight forward, we just need to pull up the Zip code and the Rating
+// Then take an average per zip code
+
+val df = spark.read.option("header",true).csv("gs_data.csv")
+
+// cast the Rating column to a numerical type
+import org.apache.spark.sql.types.FloatType
+
+val df2 = df.withColumn("gsRating", col("gsRating").cast(FloatType))
+
+// non-linear function
+import org.apache.spark.sql.functions.exp
+val scored = df2.withColumn("score", (exp($"gsRating") / 2000.0 + $"gsRating") / 2.0)
+
+val gb = scored.groupBy("zip").mean("score")
+
+// this gives us the dataframe of average ratings
+gb.show()
+
+// saving
+gb.withColumnRenamed("avg(score)","gsScore").write.save("gs_res.parquet")

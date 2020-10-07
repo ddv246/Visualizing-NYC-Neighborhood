@@ -1,0 +1,13 @@
+//DATA INGEST - NYC PROPERTY SALES DATA 
+
+//The data was directly downloaded from NYC OPEN DATA as a csv file
+
+//moving file from local to dumbo
+scp ./NYC_Property_Sales.csv ddv246@dumbo.es.its.nyu.edu:/home/ddv246
+
+//inside dumbo creating a new directory
+hdfs dfs -mkdir BDAD_Project
+
+//moving data into HDFS
+hdfs dfs -put NYC_Property_Sales.csv hdfs:///user/ddv246/BDAD_Project/
+hdfs dfs -ls /user/ddv246/BDAD_Project/

@@ -1,0 +1,34 @@
+// DATA CLEANING - 311 DATA
+
+val requestFile = "BDAD_Project/311_Service_Requests_from_2019.csv"
+val requestRDD = sc.textFile(requestFile)
+
+// seperate fields by commas while ignoring commas within fields
+val requestFieldsRDD = requestRDD.map(line => line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)"))
+
+// keep columns: date created (dropping time), complaint type (to lowercase), descriptor(to lowercase), incident zip, borough (to lowercase)
+val requestDroppedColRDD = requestFieldsRDD.map(line => Array(line(1).split(' ')(0), line(5).toLowerCase, line(6).toLowerCase, line(8), line(25).toLowerCase))
+
+// keep rows where the zip code starts with 10 or 11
+val NYCZipRequestsRDD = requestDroppedColRDD.filter(line => line(3).startsWith("10") || line(3).startsWith("11"))
+
+// drop '-' and extra 4 digits on some zipcodes (ex: "10001-4567" becomes "10001")
+val fiveDigitZipRequestsRDD = NYCZipRequestsRDD.map(line => Array(line(0), line(1), line(2), line(3).split('-')(0), line(4)))
+
+// keep rows where zipcode is exactly 5 digits
+val ZIPregex = """\d{5}""".r
+val validZipRequestsRDD = fiveDigitZipRequestsRDD.filter(line => ZIPregex.pattern.matcher(line(3)).matches)
+
+// combine complaint subcatagories (ex: "noise - vehical" and "noise - construction" become "noise")
+val simpleComplaintsRDD = validZipRequestsRDD.map(line => Array(line(0), line(1).split(" - ")(0), line(2), line(3), line(4)))
+
+// keep rows with borough value "bronx", "manhattan", "brooklyn", "queens", "staten island"
+val filteredBoroughsRDD = simpleComplaintsRDD.filter(line => line(4) == "bronx"
+    || line(4) == "manhattan"
+    || line(4) == "brooklyn"
+    || line(4) == "queens"
+    || line(4) == "staten island")
+
+// reformat data and save to text files
+val cleaned311RDD = filteredBoroughsRDD.map(line => line(0) + "," + line(1) + "," + line(2) + "," + line(3) + "," + line(4))
+cleaned311RDD.saveAsTextFile("BDAD_Project/311_Cleaned")

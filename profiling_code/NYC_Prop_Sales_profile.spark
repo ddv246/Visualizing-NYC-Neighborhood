@@ -1,0 +1,9 @@
+// DATA PROFILING - NYC PROPERTY SALES DATA
+
+val datafile = "hdfs:///user/ddv246/BDAD_Project/NYC_Property_Sales.csv"
+val file = sc.textFile(datafile)
+file.count() //345060
+
+val datafile2_cleaned="hdfs:///user/ddv246/BDAD_Project/Property_Sales_Cleaned_final.csv"
+val file_2 = sc.textFile(datafile2_cleaned)
+file_2.count() //200524

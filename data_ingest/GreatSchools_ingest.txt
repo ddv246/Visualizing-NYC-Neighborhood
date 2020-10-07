@@ -1,0 +1,7 @@
+// DATA INGEST - GREATSCHOOLS DATA
+
+// copy the data file from local to 
+scp gs_data.csv rf1316@nyudumbo:~/bdad/project/
+
+// adding the file to hdfs
+hfs -put gs_data.csv
